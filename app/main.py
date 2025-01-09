@@ -4,7 +4,7 @@
 
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
-from executor import execute_script
+from .executor import execute_script
 import os
 
 
