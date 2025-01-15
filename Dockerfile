@@ -1,5 +1,5 @@
 # 基础镜像
-FROM python:3.9-slim
+FROM python:3.10-slim
 
 # 安装依赖
 COPY requirements.txt .
@@ -13,7 +13,7 @@ RUN mkdir -p host_code
 COPY app/ ./app/
 
 # 暴露端口
-EXPOSE 8000
+EXPOSE 1234
 
 # 启动 FastAPI 应用
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "1234"]
