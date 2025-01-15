@@ -4,10 +4,18 @@ A FastAPI-based service for securely executing Python code inside a Docker conta
 
 ## Features
 
-- Dynamic Code Submission: Submit Python code via a REST API.
-- Secure Execution: Code runs inside a Docker container to ensure isolation.
-- Flexible Port Configuration: Port can be customized using environment variables.
-- Rich Feedback: Provides output, logs, and error messages for submitted code.
+* **Dynamic Code Submission**: Submit Python code via a REST API.
+* **Secure Execution**: Code runs inside a Docker container to ensure isolation.
+* **Rich Feedback**: Provides output, logs, and error messages for submitted code.
+* **Script Timeout and Error Handling**: Handles execution timeouts, syntax errors, and runtime exceptions gracefully.
+* **Structured Codebase**: Modularized for better maintainability and extensibility.
+
+## Updates in this Version
+
+* Replaced the old `execute_script` function with the `ScriptExecutor` class for enhanced flexibility and error handling.
+* Added detailed logging for script execution and error scenarios.
+* Docker integration using a lightweight `Python:3.10-slim` image.
+* Updated project structure for better clarity and scalability.
 
 ## Project Structure
 
@@ -16,8 +24,8 @@ mixed_docker_execution/
 ├── Dockerfile                # Defines the Docker container
 ├── app/                      # Application code
 │   ├── main.py               # FastAPI main application
-│   ├── executor.py           # Code execution logic
-├── host_code/                # Mounted directory for code execution
+│   ├── executor.py           # Code execution logic with ScriptExecutor
+├── host_code/                # Mounted directory for user-submitted code
 │   ├── sample_script.py      # Example Python script
 ├── requirements.txt          # Dependencies
 └── README.md                 # Project documentation
@@ -25,8 +33,8 @@ mixed_docker_execution/
 
 ## Prerequisites
 
-- Docker installed ([Download Docker](https://www.docker.com/))
-- Python 3.9+ (optional, for testing with the `requests` library)
+* **Docker Installed**: [Download Docker](https://www.docker.com/)
+* **Python 3.10+**: Optional, for local development or testing purposes.
 
 ## Installation
 
@@ -35,15 +43,13 @@ mixed_docker_execution/
    git clone <repository_url>
    cd mixed_docker_execution
    ```
-
 2. Build the Docker Image:
    ```bash
    docker build -t mixed-docker-executor .
    ```
-
 3. Run the Container:
    ```bash
-   docker run --rm -v $(pwd)/host_code:/usr/src/app/host_code -p 22499:22499 mixed-docker-executor
+   docker run --rm -v $(pwd)/host_code:/usr/src/app/host_code -p 8000:8000 mixed-docker-executor
    ```
 
 ## Usage
@@ -53,7 +59,7 @@ mixed_docker_execution/
 Submit Python code dynamically using `curl`:
 
 ```bash
-curl -X POST "http://<host_ip>:22499/submit_code" \
+curl -X POST "http://127.0.0.1:8000/submit_code" \
 -H "Content-Type: application/json" \
 -d '{"code": "print(\"Hello from FastAPI!\")"}'
 ```
@@ -65,7 +71,7 @@ You can also use Python to send a POST request:
 ```python
 import requests
 
-url = "http://<host_ip>:22499/submit_code"
+url = "http://127.0.0.1:8000/submit_code"
 headers = {"Content-Type": "application/json"}
 data = {"code": 'print("Hello from FastAPI!")'}
 
@@ -75,51 +81,74 @@ print(response.json())
 
 ### Example Output
 
-If the code executes successfully, you should receive:
+#### Success Case:
 
 ```json
 {
   "status": "success",
   "output": "Hello from FastAPI!\n",
-  "error": ""
+  "error": "",
+  "return_code": 0,
+  "timeout": false
 }
 ```
 
-If there's an error in the code:
+#### Error Case (e.g., Syntax Error):
 
 ```json
 {
-  "status": "success",
+  "status": "failure",
   "output": "",
-  "error": "SyntaxError: unexpected EOF while parsing"
+  "error": "SyntaxError: unexpected EOF while parsing",
+  "return_code": 1,
+  "timeout": false
+}
+```
+
+#### Timeout Case:
+
+```json
+{
+  "status": "failure",
+  "output": "",
+  "error": "TimeoutExpired: Command exceeded 10 seconds.",
+  "return_code": -1,
+  "timeout": true
 }
 ```
 
 ## Configuration
 
-- **Customizing the Port**:
-  The default port is `22499`. You can override it using the `PORT` environment variable:
+* **Customizing the Python Interpreter**: The `ScriptExecutor` class in `executor.py` allows for specifying the Python interpreter (default: `python3`).
+* **Timeout Setting**: You can customize the script execution timeout (default: `10 seconds`) by modifying the `timeout` parameter in `executor.py` or during deployment.
+* **Docker Port Mapping**: By default, the service listens on port `8000`. This can be overridden during container execution:
   ```bash
-  docker run --rm -e PORT=3000 -p 3000:3000 mixed-docker-executor
+  docker run --rm -p 8080:8000 mixed-docker-executor
   ```
 
 ## Testing
 
-To test the service:
+### Manual Testing
 
-1. Start the Docker container as described above.
-2. Submit test cases using the provided `curl` or Python examples.
+1. Start the Docker container.
+2. Use the provided `curl` or Python examples to submit code and verify the responses.
+
+### Automated Testing
+
+Automated testing with `pytest` will be covered in future updates.
 
 ## Limitations
 
-- The service currently supports only Python scripts.
-- Execution is limited to single-file Python code.
+* Currently supports only Python scripts.
+* Execution is limited to single-file Python code.
+* No authentication implemented for API endpoints.
 
 ## Future Improvements
 
-- Add support for other programming languages.
-- Implement authentication for API endpoints.
-- Enhance logging and debugging capabilities.
+* Add support for other programming languages.
+* Implement API authentication for security.
+* Integrate CI/CD pipelines for testing and deployment.
+* Enhance resource isolation with more robust sandboxing.
 
 ## License
 
